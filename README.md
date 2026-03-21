@@ -98,7 +98,7 @@ All strategic decisions remain exclusively human responsibilities.
 
 ##  Author
 
-**Abraham** | San Luis Potosí, México
+**Abraham HERNANDEZ DORANTES ** | San Luis Potosí, México
 Kohn-Sham convergence documented: March 20, 2026
 Competition: OpenAI Model Craft Challenge — Parameter Golf (March 18 – April 30, 2026)
 

@@ -1,5 +1,5 @@
 README
-# ABRAMGOCHI 🧬🌐
+# ABRAMGOCHI 🧬
 
 **Adaptive Behavioral Relational Agent Model with Genetic Optimization and Cognitive Hereditary Intelligence**
 
@@ -15,7 +15,7 @@ A **mini that contains a universe** — a minimal system where agents exist with
 
 ---
 
-## ⚛️ Theoretical Foundation
+## 🎉 Theoretical Foundation
 
 Structural convergence with the **Kohn-Sham equation** (Density Functional Theory):
 ```
@@ -32,7 +32,7 @@ Structural convergence with the **Kohn-Sham equation** (Density Functional Theor
 
 ---
 
-## 🔬 Core Components
+## ✅  Core Components
 
 **1. Relational Network** — agents influence each other through graph connections
 
@@ -60,7 +60,7 @@ child = copy(parent) + mutation            # asexual
 
 ---
 
-## 📐 Results
+##  Results
 
 | Metric | Value |
 |---|---|
@@ -71,7 +71,7 @@ child = copy(parent) + mutation            # asexual
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 ```bash
 git clone https://github.com/abrahaw123-cell/abramgochi
 cd abramgochi
@@ -83,7 +83,7 @@ Login: `admin` / `1234` (full access) or `viewer` / `0000` (read only)
 
 ---
 
-## 🌐 Framework
+##  Framework
 
 **H.A.S. — Human Anticipation Strategist**
 Original methodology for anticipating human behavior in organizational systems.
@@ -96,7 +96,7 @@ All strategic decisions remain exclusively human responsibilities.
 
 ---
 
-## 📅 Author
+##  Author
 
 **Abraham** | San Luis Potosí, México
 Kohn-Sham convergence documented: March 20, 2026

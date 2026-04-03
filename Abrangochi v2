@@ -1,0 +1,203 @@
+
+import random
+import math
+import pygame
+import networkx as nx
+
+WIDTH = 900
+HEIGHT = 700
+
+pygame.init()
+screen = pygame.display.set_mode((WIDTH,HEIGHT))
+clock = pygame.time.Clock()
+
+# ---------------------------
+# CONFIG
+# ---------------------------
+
+SEED = 42
+N_NODOS = 12
+
+random.seed(SEED)
+
+# ---------------------------
+# UTILIDADES
+# ---------------------------
+
+def normalizar(v):
+
+    mag = math.sqrt(v[0]**2 + v[1]**2)
+
+    if mag == 0:
+        return (0,0)
+
+    return (v[0]/mag,v[1]/mag)
+
+# ---------------------------
+# VIRUS
+# ---------------------------
+
+class Virus:
+
+    def __init__(self,nodo):
+
+        self.nodo = nodo
+        self.virulencia = random.uniform(0.2,0.8)
+
+    def actuar(self,red):
+
+        red.estado[self.nodo] -= self.virulencia*2
+
+        if random.random() < 0.05:
+
+            vecinos = list(red.G.neighbors(self.nodo))
+
+            if vecinos:
+
+                self.nodo = random.choice(vecinos)
+
+# ---------------------------
+# MOLECULA
+# ---------------------------
+
+class Molecula:
+
+    def __init__(self,i):
+
+        self.id = i
+        self.energia = random.uniform(40,60)
+
+        ang = 2*math.pi*i/10
+        self.direccion = (math.cos(ang),math.sin(ang))
+
+    def mutar(self):
+
+        if random.random() < 0.1:
+
+            dx = self.direccion[0] + random.uniform(-0.2,0.2)
+            dy = self.direccion[1] + random.uniform(-0.2,0.2)
+
+            self.direccion = normalizar((dx,dy))
+
+# ---------------------------
+# RED
+# ---------------------------
+
+class Red:
+
+    def __init__(self):
+
+        self.G = nx.erdos_renyi_graph(N_NODOS,0.5)
+
+        self.estado = {n:random.uniform(40,60) for n in self.G.nodes()}
+
+        self.pos = nx.spring_layout(self.G)
+
+    def paso(self):
+
+        for n in self.estado:
+
+            ruido = random.gauss(0,0.5)
+
+            self.estado[n] += ruido
+
+            self.estado[n] = max(0,min(100,self.estado[n]))
+
+# ---------------------------
+# SISTEMA
+# ---------------------------
+
+class Sistema:
+
+    def __init__(self):
+
+        self.red = Red()
+
+        self.moleculas = [Molecula(i) for i in range(N_NODOS)]
+
+        self.virus = []
+
+    def ciclo(self):
+
+        self.red.paso()
+
+        for m in self.moleculas:
+            m.mutar()
+
+        for v in self.virus:
+            v.actuar(self.red)
+
+    def spawn_virus(self):
+
+        nodo = random.choice(list(self.red.G.nodes()))
+
+        self.virus.append(Virus(nodo))
+
+# ---------------------------
+# VISUALIZACIÓN
+# ---------------------------
+
+def draw_system(sistema):
+
+    screen.fill((10,10,20))
+
+    for edge in sistema.red.G.edges():
+
+        n1,n2 = edge
+
+        x1 = int(sistema.red.pos[n1][0]*300+WIDTH/2)
+        y1 = int(sistema.red.pos[n1][1]*300+HEIGHT/2)
+
+        x2 = int(sistema.red.pos[n2][0]*300+WIDTH/2)
+        y2 = int(sistema.red.pos[n2][1]*300+HEIGHT/2)
+
+        pygame.draw.line(screen,(80,80,80),(x1,y1),(x2,y2),1)
+
+    for n in sistema.red.G.nodes():
+
+        x = int(sistema.red.pos[n][0]*300+WIDTH/2)
+        y = int(sistema.red.pos[n][1]*300+HEIGHT/2)
+
+        energia = sistema.red.estado[n]
+
+        color = (min(255,int(energia*2)),50,150)
+
+        pygame.draw.circle(screen,color,(x,y),12)
+
+    for v in sistema.virus:
+
+        x = int(sistema.red.pos[v.nodo][0]*300+WIDTH/2)
+        y = int(sistema.red.pos[v.nodo][1]*300+HEIGHT/2)
+
+        pygame.draw.circle(screen,(255,50,50),(x,y),6)
+
+# ---------------------------
+# MAIN LOOP
+# ---------------------------
+
+sistema = Sistema()
+
+running = True
+
+while running:
+
+    for event in pygame.event.get():
+
+        if event.type == pygame.QUIT:
+            running = False
+
+        if event.type == pygame.KEYDOWN:
+
+            if event.key == pygame.K_v:
+
+                sistema.spawn_virus()
+
+    sistema.ciclo()
+
+    draw_system(sistema)
+
+    pygame.display.flip()
+
+    clock.tick(30)
+
+pygame.quit()

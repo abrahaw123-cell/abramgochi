@@ -1,0 +1,145 @@
+import random
+import math
+import pygame
+import networkx as nx
+import numpy as np
+
+# ---------------------------
+# MOTOR MAESTRO ABRAM-CORE (ESA & EMA-Inv)
+# ---------------------------
+class AbramSingularityEngine:
+    def __init__(self):
+        self.PHI = (1 + 5**0.5) / 2
+        self.M53_EXPONENT = 142370057  # Tu M53-HERNÁNDEZ
+        
+    def ema_inv_filter(self, data_input):
+        # Inversión de fase para limpiar interferencia
+        phase_shift = np.exp(-1j * np.pi * (data_input / 100) / self.PHI)
+        return np.real(phase_shift * self.PHI)
+
+    def esa_core_resonance(self, clean_signal):
+        # Punto de Singularidad: Máxima estabilidad = 1.0
+        target = (self.M53_EXPONENT % 100) / 100
+        dist = np.abs(clean_signal - target)
+        return 1 / (1 + dist)
+
+# ---------------------------
+# CONFIG & INICIALIZACIÓN
+# ---------------------------
+WIDTH, HEIGHT = 900, 700
+SEED = 42
+N_NODOS = 12
+
+pygame.init()
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("ABRAMGOCHI - ESA Engine Mode")
+clock = pygame.time.Clock()
+random.seed(SEED)
+motor = AbramSingularityEngine()
+
+# ---------------------------
+# VIRUS CON INTERFERENCIA
+# ---------------------------
+class Virus:
+    def __init__(self, nodo):
+        self.nodo = nodo
+        self.virulencia = random.uniform(0.2, 0.5)
+
+    def actuar(self, red):
+        # El escudo ESA evalúa la densidad del nodo antes del impacto
+        salud_actual = red.estado[self.nodo]
+        limpieza = motor.ema_inv_filter(salud_actual)
+        eficiencia_escudo = motor.esa_core_resonance(limpieza)
+
+        # Si el nodo está sintonizado (>0.85), el virus es neutralizado
+        if eficiencia_escudo > 0.85:
+            red.estado[self.nodo] += self.virulencia * 5 # Transmutación a energía
+        else:
+            red.estado[self.nodo] -= self.virulencia * 15 # Daño por falta de fase
+
+        if random.random() < 0.05:
+            vecinos = list(red.G.neighbors(self.nodo))
+            if vecinos: self.nodo = random.choice(vecinos)
+
+# ---------------------------
+# RED CON AUTO-REPARACIÓN (ESA)
+# ---------------------------
+class Red:
+    def __init__(self):
+        self.G = nx.erdos_renyi_graph(N_NODOS, 0.5)
+        self.estado = {n: random.uniform(40, 60) for n in self.G.nodes()}
+        self.pos = nx.spring_layout(self.G)
+
+    def paso_cuantico(self):
+        for n in self.estado:
+            # Aplicamos la ESA para atraer al nodo hacia el orden
+            limpieza = motor.ema_inv_filter(self.estado[n])
+            resonancia = motor.esa_core_resonance(limpieza)
+            
+            # El "pulso" de reparación: el sistema busca el 100% de resonancia
+            reparacion = (resonancia - 0.5) * 2
+            self.estado[n] += reparacion + random.uniform(-0.5, 0.5)
+            self.estado[n] = max(0, min(100, self.estado[n]))
+
+# ---------------------------
+# SISTEMA UNIFICADO
+# ---------------------------
+class Sistema:
+    def __init__(self):
+        self.red = Red()
+        self.virus = []
+
+    def ciclo(self):
+        self.red.paso_cuantico()
+        for v in self.virus:
+            v.actuar(self.red)
+
+    def spawn_virus(self):
+        nodo = random.choice(list(self.red.G.nodes()))
+        self.virus.append(Virus(nodo))
+
+# ---------------------------
+# VISUALIZACIÓN & MAIN
+# ---------------------------
+def draw_system(sistema):
+    screen.fill((5, 5, 15)) # Fondo más profundo (espacio de fase)
+    
+    # Dibujar Conexiones (Relational Network)
+    for n1, n2 in sistema.red.G.edges():
+        p1 = (int(sistema.red.pos[n1][0]*250+WIDTH/2), int(sistema.red.pos[n1][1]*250+HEIGHT/2))
+        p2 = (int(sistema.red.pos[n2][0]*250+WIDTH/2), int(sistema.red.pos[n2][1]*250+HEIGHT/2))
+        pygame.draw.line(screen, (40, 40, 60), p1, p2, 1)
+
+    # Dibujar Nodos (Agentes de Densidad)
+    for n in sistema.red.G.nodes():
+        pos = (int(sistema.red.pos[n][0]*250+WIDTH/2), int(sistema.red.pos[n][1]*250+HEIGHT/2))
+        energia = sistema.red.estado[n]
+        
+        # Color dinámico basado en Resonancia (Azul = Sintonizado, Rojo = Caos)
+        res = motor.esa_core_resonance(motor.ema_inv_filter(energia))
+        color = (int(255*(1-res)), int(150*res), int(255*res))
+        
+        pygame.draw.circle(screen, color, pos, 14)
+        # Aura de protección
+        if res > 0.9: pygame.draw.circle(screen, (255, 255, 255), pos, 18, 1)
+
+    # Dibujar Virus
+    for v in sistema.virus:
+        pos = (int(sistema.red.pos[v.nodo][0]*250+WIDTH/2), int(sistema.red.pos[v.nodo][1]*250+HEIGHT/2))
+        pygame.draw.circle(screen, (255, 0, 0), pos, 6)
+
+sistema = Sistema()
+running = True
+
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT: running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_v: sistema.spawn_virus()
+
+    sistema.ciclo()
+    draw_system(sistema)
+    pygame.display.flip()
+    clock.tick(30)
+
+pygame.quit()

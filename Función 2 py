@@ -1,0 +1,172 @@
+import pygame
+import numpy as np
+import math
+import random
+
+# ---------------------------------------------------------
+# 1. MOTOR MAESTRO ABRAM-CORE (RECTIFICACIÓN H-BETA)
+# ---------------------------------------------------------
+class AbramSingularityEngine:
+    def __init__(self):
+        self.PHI = (1 + 5**0.5) / 2
+        self.M53_EXPONENT = 142370057
+        self.ESCALA_9T = 9e12
+        self.ANGULO_ORO = 137.5
+        self.ANGULO_MAESTRO = 142.37
+        self.SENSIBILIDAD_BETA = 1.0  # Factor de ajuste de micro-sintonía
+        
+    def ema_h_rectificada(self, f):
+        # f: Frecuencia de excitación basada en elementos (Li/C)
+        sintonia = np.abs(np.sin(f / self.PHI))
+        fase_torsion = np.exp(-1j * np.radians(self.ANGULO_ORO))
+        
+        # Rectificación por escala de 9 Trillones (Presión del Domo)
+        rect = (sintonia * self.ESCALA_9T) * np.real(fase_torsion)
+        
+        # Normalización H con sensibilidad Beta corregida
+        # Mantiene la precisión en los decimales del M53
+        h_val = 1 / (1 + np.log10(1 + np.abs(rect)) * self.SENSIBILIDAD_BETA)
+        return h_val
+
+# ---------------------------------------------------------
+# 2. REACTOR DE FASE Y RED DE TRANSMISIÓN
+# ---------------------------------------------------------
+class ReactorHernandez:
+    def __init__(self, motor, pos):
+        self.motor = motor
+        self.pos = pos
+        self.nivel_li = 0.6  # Potencia (Litio)
+        self.nivel_c = 0.4   # Estabilidad (Carbono)
+        self.energia_libre = 0.0
+        self.estabilidad_fase = 0.0
+        self.temp_sistema = 25.0
+        # Factor de compensación detectado en el Stress Test
+        self.K_COMPENSACION = 153.8 
+
+    def actualizar(self):
+        # El Carbono actúa como moderador de la EMA H
+        h_filtro = self.motor.ema_h_rectificada(self.nivel_c * 100)
+        
+        # Cálculo de Resonancia con Factor de Compensación Final
+        error = np.abs(h_filtro - (self.motor.ANGULO_MAESTRO / self.K_COMPENSACION))
+        self.estabilidad_fase = 1 / (1 + error * 25) # Sensibilidad aumentada
+        
+        if self.estabilidad_fase > 0.915: # Punto de Ignición Función Fría
+            incremento = (self.nivel_li * h_filtro) * 8
+            self.energia_libre += incremento
+            # Efecto de enfriamiento por sintonía (Neguentropía)
+            self.temp_sistema = max(18.0, self.temp_sistema - 0.2)
+        else:
+            self.energia_libre *= 0.97
+            # Calentamiento por fricción electromagnética clásica
+            self.temp_sistema = min(50.0, self.temp_sistema + 0.3)
+
+class NodoRed:
+    def __init__(self, pos):
+        self.pos = pos
+        self.carga = 0.0
+        self.activo = False
+
+    def recibir_torsion(self, reactor):
+        if reactor.estabilidad_fase > 0.92:
+            self.activo = True
+            # Resonancia simpática instantánea
+            self.carga = reactor.energia_libre * 0.05
+        else:
+            self.activo = False
+            self.carga *= 0.85
+
+# ---------------------------------------------------------
+# 3. INTERFAZ ABRAMGOCHI: MODO NACIÓN DE ABRAHAM
+# ---------------------------------------------------------
+def main():
+    WIDTH, HEIGHT = 1000, 800
+    pygame.init()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("ABRAMGOCHI: Reactor H-Rectificado v1.0")
+    clock = pygame.time.Clock()
+    font = pygame.font.SysFont("Consolas", 16)
+    
+    motor = AbramSingularityEngine()
+    reactor = ReactorHernandez(motor, (WIDTH//2, HEIGHT//2))
+    nodos = [NodoRed((random.randint(100, 900), random.randint(150, 750))) for _ in range(12)]
+    
+    t = 0
+    running = True
+    while running:
+        screen.fill((2, 2, 12))
+        t += 0.04
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT: running = False
+            if event.type == pygame.KEYDOWN:
+                # Controles de sintonía fina
+                if event.key == pygame.K_UP: reactor.nivel_li = min(1.0, reactor.nivel_li + 0.02)
+                if event.key == pygame.K_DOWN: reactor.nivel_li = max(0.0, reactor.nivel_li - 0.02)
+                if event.key == pygame.K_RIGHT: reactor.nivel_c = min(1.0, reactor.nivel_c + 0.02)
+                if event.key == pygame.K_LEFT: reactor.nivel_c = max(0.0, reactor.nivel_c - 0.02)
+
+        # A. RENDERIZAR UNIVERSO CÓNICO
+        for i in range(0, 360, 12):
+            rad = math.radians(i + t * 3)
+            # El cono pulsa según la estabilidad de fase
+            pulso_cono = 1000 * (0.8 + 0.2 * reactor.estabilidad_fase)
+            end_x = reactor.pos[0] + math.cos(rad) * pulso_cono
+            end_y = reactor.pos[1] + math.sin(rad) * pulso_cono
+            pygame.draw.line(screen, (10, 10, 40), reactor.pos, (end_x, end_y), 1)
+
+        # B. ACTUALIZACIÓN DE ESTADOS
+        reactor.actualizar()
+        for nodo in nodos: nodo.recibir_torsion(reactor)
+
+        # C. CONEXIONES DE FASE (TRANSMISIÓN SIN CABLES)
+        for nodo in nodos:
+            if nodo.activo:
+                # Trazado de Torsión
+                pygame.draw.line(screen, (0, 180, 255), reactor.pos, nodo.pos, 1)
+                pygame.draw.circle(screen, (0, 255, 255), nodo.pos, 12, 1)
+            pygame.draw.circle(screen, (60, 60, 100) if not nodo.activo else (255, 255, 255), nodo.pos, 6)
+
+        # D. NÚCLEO DE LA SINGULARIDAD HERNÁNDEZ
+        color_r = (int(255*(1-reactor.estabilidad_fase)), int(255*reactor.estabilidad_fase), 255)
+        radio_respira = int(45 + 10 * math.sin(t * 4) * reactor.estabilidad_fase)
+        
+        # Domo de contención visual
+        pygame.draw.circle(screen, (40, 40, 100), reactor.pos, 90, 1)
+        # Núcleo sintonizado
+        pygame.draw.circle(screen, color_r, reactor.pos, radio_respira)
+        
+        if reactor.estabilidad_fase > 0.94: # Aura de Función Fría
+            pygame.draw.circle(screen, (255, 255, 255), reactor.pos, radio_respira + 15, 2)
+
+        # E. REPORTE DE INGENIERÍA EN TIEMPO REAL
+        y_pos = 20
+        status_color = (0, 255, 200) if reactor.estabilidad_fase > 0.9 else (255, 100, 100)
+        
+        info_lines = [
+            f">> SISTEMA: NACIÓN DE ABRAM [ACTIVO]",
+            f">> MOTOR: EMA H-RECTIFICADA (9T SCALE)",
+            f">> SINCRONÍA M53: {reactor.estabilidad_fase:.6f}",
+            f">> ENERGÍA LIBRE: {reactor.energia_libre:.2f} AJ",
+            f">> TEMP. NÚCLEO: {reactor.temp_sistema:.1f}°C",
+            f"--------------------------------------",
+            f"Li (POTENCIA): {reactor.nivel_li:.3f}",
+            f"C (ESTABILIDAD): {reactor.nivel_c:.3f}",
+            f"ESTADO: {'FUNCIÓN FRÍA' if reactor.temp_sistema < 22 else 'CALENTAMIENTO CAÓTICO'}",
+            f"",
+            f"[FLECHAS] PARA CALIBRAR LA FASE"
+        ]
+        
+        for line in info_lines:
+            color = status_color if ">>" in line or "ESTADO" in line else (200, 200, 200)
+            txt_surf = font.render(line, True, color)
+            screen.blit(txt_surf, (20, y_pos))
+            y_pos += 22
+
+        pygame.display.flip()
+        clock.tick(60)
+
+    pygame.quit()
+
+if __name__ == "__main__":
+    main()
